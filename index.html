@@ -45,7 +45,6 @@
             border: 2px solid coral;
             color: white;
             background-color: transparent;
-
         }
     </style>
 </head>
@@ -56,6 +55,9 @@
     </div>
     <div id="settings-container">
         <button onclick="toggle_balls()">Toggle Balls</button>
+        <button onclick="toggle_lines()">Toggle Lines</button>
+        <button onclick="toggle_fancy_lines()">Toggle Fancy Lines</button>
+        <button onclick="toggle_line_dimmer()">Toggle Line Dimmer</button>
     </div>
 
     <script>
@@ -74,10 +76,26 @@
         var max_ball_velocity = 2;
         var min_line_intensity = 0;
         var max_line_intensity = 0.8;
-        var draw_balls = false;
+
+        var draw_balls = true;
+        var draw_lines = false;
+        var draw_fancy_lines = false;
+        var dim_lines = false;
 
         function toggle_balls() {
             draw_balls = (draw_balls) ? false : true;
+        }
+
+        function toggle_lines() {
+            draw_lines = (draw_lines) ? false : true;
+        }
+
+        function toggle_fancy_lines() {
+            draw_fancy_lines = (draw_fancy_lines) ? false : true;
+        }
+
+        function toggle_line_dimmer() {
+            dim_lines = (dim_lines) ? false : true;
         }
 
         // https://gist.github.com/danieliser/b4b24c9f772066bcf0a6
@@ -132,30 +150,36 @@
 
 
         function draw_line_between(this_ball, that_ball) {
-            var distance = distance_between(this_ball, that_ball);
-            var rate = distance / max_line_distance;
+            var alpha = 1;
 
-            var alpha = 1 - rate;
+            if (dim_lines) {
+                var distance = distance_between(this_ball, that_ball);
+                var rate = distance / max_line_distance;
 
-            // gradient
-            var grad = ctx.createLinearGradient(this_ball.x, this_ball.y, that_ball.x, that_ball.y);
-            grad.addColorStop(0, convertHex(this_ball.color, alpha));
-            grad.addColorStop(1, convertHex(that_ball.color, alpha));
+                alpha = 1 - rate;
+            }
 
-            ctx.strokeStyle = grad;
+            if (draw_fancy_lines) {
+                // gradient line
+                var grad = ctx.createLinearGradient(this_ball.x, this_ball.y, that_ball.x, that_ball.y);
+                grad.addColorStop(0, convertHex(this_ball.color, alpha));
+                grad.addColorStop(1, convertHex(that_ball.color, alpha));
 
-            ctx.beginPath();
-            ctx.moveTo(this_ball.x, this_ball.y);
-            ctx.lineTo(that_ball.x, that_ball.y);
+                ctx.strokeStyle = grad;
 
-            ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(this_ball.x, this_ball.y);
+                ctx.lineTo(that_ball.x, that_ball.y);
 
-            /** white line that changes opacity */
-            // ctx.beginPath();
-            // ctx.moveTo(this_ball.x, this_ball.y);
-            // ctx.lineTo(that_ball.x, that_ball.y);
-            // ctx.strokeStyle = "rgba(255, 255, 255, " + alpha + ") ";
-            // ctx.stroke();
+                ctx.stroke();
+            } else {
+                /** white line that changes opacity */
+                ctx.beginPath();
+                ctx.moveTo(this_ball.x, this_ball.y);
+                ctx.lineTo(that_ball.x, that_ball.y);
+                ctx.strokeStyle = "rgba(255, 255, 255, " + alpha + ") ";
+                ctx.stroke();
+            }
         }
 
         function init() {
@@ -191,7 +215,7 @@
                     const that_ball = balls[j];
                     const distance = distance_between(this_ball, that_ball);
                     if (distance <= max_line_distance) {
-                        draw_line_between(this_ball, that_ball);
+                        if (draw_lines) draw_line_between(this_ball, that_ball);
                         this_ball.connections++;
                         this_ball.accum_distance += 1 - distance / max_line_distance;
                     }
