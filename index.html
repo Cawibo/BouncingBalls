@@ -26,6 +26,16 @@
             z-index: -1;
         }
 
+        h2 {
+            color: white;
+        }
+
+        #fps-container {
+            position: absolute;
+            bottom: 40px;
+            left: 20px;
+        }
+
         #settings-container {
             position: absolute;
             bottom: 20px;
@@ -53,11 +63,15 @@
     <div id="canvas-container">
         <canvas id="bgCanvas" />
     </div>
+    <div id="fps-container">
+        <h2 id="fps-content"></h2>
+    </div>
     <div id="settings-container">
         <button onclick="toggle_balls()">Toggle Balls</button>
         <button onclick="toggle_lines()">Toggle Lines</button>
         <button onclick="toggle_fancy_lines()">Toggle Fancy Lines</button>
         <button onclick="toggle_line_dimmer()">Toggle Line Dimmer</button>
+        <button onclick="toggle_make_intense()">Toggle Ball Intensity</button>
     </div>
 
     <script>
@@ -70,6 +84,7 @@
 
         var balls = [];
         var colors = ["#87CEEB", "#FF7F50", "#FFC0CB"]
+        var bg_color = "#24242D";
         var num_balls = 100;
         var accum_distance_radius_modifier = 2;
         var max_line_distance = 200;
@@ -78,9 +93,21 @@
         var max_line_intensity = 0.8;
 
         var draw_balls = true;
-        var draw_lines = false;
-        var draw_fancy_lines = false;
-        var dim_lines = false;
+        var draw_lines = true;
+        var draw_fancy_lines = true;
+        var dim_lines = true;
+        var make_intense = true;
+
+        var time_of_last_check = performance.now();
+
+        function fps_counter() {
+            delta = (performance.now() - time_of_last_check) / 1000;
+            time_of_last_check = performance.now();
+            var fps = 1 / delta;
+
+            var fps_h2 = document.getElementById("fps-content");
+            fps_h2.innerHTML = fps;
+        }
 
         function toggle_balls() {
             draw_balls = (draw_balls) ? false : true;
@@ -91,11 +118,18 @@
         }
 
         function toggle_fancy_lines() {
+            if (!draw_lines) draw_lines = true;
             draw_fancy_lines = (draw_fancy_lines) ? false : true;
         }
 
         function toggle_line_dimmer() {
+            if (!draw_lines) draw_lines = true;
             dim_lines = (dim_lines) ? false : true;
+        }
+
+        function toggle_make_intense() {
+            if (!draw_balls) draw_balls = true;
+            make_intense = (make_intense) ? false : true;
         }
 
         // https://gist.github.com/danieliser/b4b24c9f772066bcf0a6
@@ -124,6 +158,17 @@
                 ctx.arc(this.x, this.y, this.radius + this.accum_distance * accum_distance_radius_modifier, 0, 2 * Math.PI, false);
                 ctx.fillStyle = this.color;
                 ctx.fill();
+
+                if (make_intense) {
+                    ctx.globalCompositeOperator = "screen";
+
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius + this.accum_distance * accum_distance_radius_modifier, 0, 2 * Math.PI, false);
+                    ctx.fillStyle = "rgba(255, 255, 255, " + Math.max(0, Math.min(0.5, 1 - this.accum_distance * 0.3)) + ")";
+                    ctx.fill();
+
+                    ctx.globalCompositeOperator = "source-over";
+                }
             }
 
             this.update = function () {
@@ -199,7 +244,9 @@
         }
 
         function draw() {
-            ctx.fillStyle = "#24242D";
+            fps_counter();
+
+            ctx.fillStyle = bg_color;
             ctx.fillRect(0, 0, c.width, c.height);
 
             /** resets ball conditions */
@@ -209,9 +256,10 @@
                 ball.accum_distance = 0;
             }
 
-            for (let i = 0; i < balls.length; i++) {
+            /** finds neighbouring balls, updates their values, and draws lines */
+            for (let i = 0; i < balls.length - 1; i++) {
                 const this_ball = balls[i];
-                for (let j = 0; j < balls.length; j++) {
+                for (let j = i + 1; j < balls.length; j++) {
                     const that_ball = balls[j];
                     const distance = distance_between(this_ball, that_ball);
                     if (distance <= max_line_distance) {
